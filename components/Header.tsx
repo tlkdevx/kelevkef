@@ -6,16 +6,17 @@ import { supabase } from '@/lib/supabaseClient';
 
 export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUserEmail(user?.email || null);
+      setUserId(user?.id || null);
     };
 
     getUser();
 
-    // Подписка на изменения сессии
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
       getUser();
     });
@@ -28,6 +29,7 @@ export default function Header() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUserEmail(null);
+    setUserId(null);
   };
 
   const linkClass = 'text-gray-700 hover:text-black transition';
@@ -47,6 +49,16 @@ export default function Header() {
               <Link href="/dashboard" className={linkClass}>
                 Кабинет
               </Link>
+              {userId && (
+                <>
+                  <Link href={`/profile/${userId}`} className={linkClass}>
+                    Мой профиль
+                  </Link>
+                  <Link href="/profile/edit" className={linkClass}>
+                    ✏️ Редактировать
+                  </Link>
+                </>
+              )}
               <button
                 onClick={handleLogout}
                 className="text-red-600 hover:underline"
