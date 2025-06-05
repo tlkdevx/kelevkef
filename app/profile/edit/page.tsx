@@ -1,3 +1,4 @@
+// Файл: app/profile/edit/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,21 +13,24 @@ export default function EditProfilePage() {
     city: '',
     about: '',
     price_per_walk: '',
+    latitude: '',
+    longitude: '',
   });
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
-      // 1) Получаем сессию
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
       if (sessionError || !session?.user) {
         router.push('/login');
         return;
       }
       const userId = session.user.id;
 
-      // 2) Получаем профиль из таблицы по user_id
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -44,6 +48,8 @@ export default function EditProfilePage() {
         city: profile.city || '',
         about: profile.about || '',
         price_per_walk: profile.price_per_walk?.toString() || '',
+        latitude: profile.latitude?.toString() || '',
+        longitude: profile.longitude?.toString() || '',
       });
 
       setLoading(false);
@@ -52,7 +58,9 @@ export default function EditProfilePage() {
     fetchProfile();
   }, [router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -61,22 +69,29 @@ export default function EditProfilePage() {
     e.preventDefault();
     setErrorMsg('');
 
-    // 1) Проверим цену
     const price = parseFloat(form.price_per_walk);
     if (isNaN(price) || price < 0) {
       setErrorMsg('Введите корректную цену');
       return;
     }
 
-    // 2) Получаем текущую сессию ещё раз
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const latNum = parseFloat(form.latitude);
+    const lonNum = parseFloat(form.longitude);
+    if (isNaN(latNum) || isNaN(lonNum)) {
+      setErrorMsg('Координаты должны быть числами');
+      return;
+    }
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (sessionError || !session?.user) {
       setErrorMsg('Сессия не найдена');
       return;
     }
     const userId = session.user.id;
 
-    // 3) Выполняем обновление напрямую
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -84,6 +99,8 @@ export default function EditProfilePage() {
         city: form.city.trim(),
         about: form.about.trim(),
         price_per_walk: price,
+        latitude: latNum,
+        longitude: lonNum,
       })
       .eq('user_id', userId);
 
@@ -95,7 +112,7 @@ export default function EditProfilePage() {
   };
 
   if (loading) {
-    return <div className="p-6">Загрузка...</div>;
+    return <div className="p-6">Загрузка собственной информации…</div>;
   }
 
   return (
@@ -136,6 +153,24 @@ export default function EditProfilePage() {
           className="w-full border p-2 rounded"
           min="0"
           step="0.01"
+          required
+        />
+        <input
+          type="text"
+          name="latitude"
+          placeholder="Широта"
+          value={form.latitude}
+          onChange={handleChange}
+          className="w-full border p-2 rounded"
+          required
+        />
+        <input
+          type="text"
+          name="longitude"
+          placeholder="Долгота"
+          value={form.longitude}
+          onChange={handleChange}
+          className="w-full border p-2 rounded"
           required
         />
         <button

@@ -1,0 +1,168 @@
+/* Файл: app/search/page.module.css */
+
+/* Общий контейнер */
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+/* Заголовок */
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Статус загрузки и ошибки */
+.status {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 8px;
+}
+.error {
+  font-size: 1rem;
+  color: #e11d48; /* красный */
+  margin-bottom: 8px;
+}
+
+/* Если нет профилей */
+.empty {
+  font-size: 1rem;
+  color: #777;
+  padding: 16px;
+}
+
+/* Обёртка для списка и карты */
+.contentWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  height: calc(100vh - 100px); /* высота экрана минус место под header/title */
+}
+
+/* Левая колонка — список */
+.list {
+  flex: 0 0 350px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb; /* светло-серый */
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+}
+
+/* Карточка исполнителя */
+.card {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 0;
+}
+
+.card:last-child {
+  border-bottom: none;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* Аватар */
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 12px;
+}
+
+/* Заглушка для аватара, если нет картинки */
+.avatarPlaceholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #d1d5db; /* серый фон */
+  color: #374151; /* темно-серый текст */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  margin-right: 12px;
+}
+
+/* Инфо в карточке */
+.info {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin: 0;
+}
+.city {
+  font-size: 0.875rem;
+  color: #6b7280; /* серый текст */
+  margin: 0;
+}
+
+/* Блок с кнопками */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.button {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  text-decoration: none;
+  border: 1px solid #6b7280;
+  color: #374151;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.button:hover {
+  background-color: #f3f4f6; /* светло-серый hover */
+}
+
+.primaryButton {
+  background-color: #3b82f6; /* синий фон */
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.primaryButton:hover {
+  background-color: #2563eb; /* темнее синий */
+}
+
+/* Правая колонка — обёртка для карты */
+.mapWrapper {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Стили для Popup */
+.popup {
+  display: flex;
+  flex-direction: column;
+}
+.popupName {
+  font-weight: 500;
+  margin: 0 0 4px 0;
+}
+.popupCity {
+  font-size: 0.875rem;
+  margin: 0 0 8px 0;
+}
+.popupLink {
+  font-size: 0.875rem;
+  color: #3b82f6;
+  text-decoration: underline;
+}

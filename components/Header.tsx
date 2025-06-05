@@ -1,3 +1,4 @@
+// Файл: components/Header.tsx
 'use client';
 
 import Link from 'next/link';
@@ -9,7 +10,9 @@ export default function Header() {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUserEmail(user?.email || null);
     };
 
@@ -34,9 +37,12 @@ export default function Header() {
   return (
     <header className="bg-white shadow">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold">
-          🐶 KelevKef
+        {/* Логотип */}
+        <Link href="/" className="text-xl font-bold flex items-center">
+          <span className="text-2xl">🐶</span>
+          <span className="ml-2">KelevKef</span>
         </Link>
+
         <nav className="flex gap-4 items-center">
           <Link href="/search" className={linkClass}>
             Найти догситтера
@@ -46,7 +52,10 @@ export default function Header() {
               <Link href="/dashboard" className={linkClass}>
                 Кабинет
               </Link>
-              <button onClick={handleLogout} className="text-red-600 hover:underline">
+              <button
+                onClick={handleLogout}
+                className="text-red-600 hover:underline"
+              >
                 Выйти
               </button>
             </>

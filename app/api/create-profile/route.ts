@@ -1,54 +1,54 @@
-// app/api/create-profile/route.ts
+// Файл: app/api/create-profile/route.ts
 
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function POST(req: Request) {
-  const cookieStore = await cookies();
+interface CreateProfileBody {
+  userId: string;
+  fullName: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+}
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: '', ...options });
-        },
-      },
+export async function POST(request: NextRequest) {
+  try {
+    const body: CreateProfileBody = await request.json();
+    const { userId, fullName, city, latitude, longitude } = body;
+
+    // upsert: создаём или обновляем запись
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .upsert(
+        [
+          {
+            user_id: userId,
+            full_name: fullName,
+            city,
+            latitude,
+            longitude,
+          },
+        ],
+        { onConflict: 'user_id' }
+      )
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Ошибка при upsert профиля:', error);
+      return NextResponse.json(
+        { error: 'Не удалось создать или обновить профиль' },
+        { status: 500 }
+      );
     }
-  );
 
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return NextResponse.json({ error: 'Пользователь не найден' }, { status: 401 });
+    return NextResponse.json({ profile: data }, { status: 200 });
+  } catch (e) {
+    console.error('Unexpected error create-profile:', e);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
-
-  const { id, user_metadata } = user;
-
-  const { error: insertError } = await supabase.from('profiles').insert([
-    {
-      id,
-      user_id: id,
-      full_name: user_metadata?.name || '',
-      avatar_url: '',
-      city: '',
-      price_per_walk: 0,
-      rating: 0,
-      about: '',
-    },
-  ]);
-
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true });
 }

@@ -1,21 +1,19 @@
+// Файл: app/layout.tsx
 import './globals.css';
-import type { Metadata } from 'next';
-import { ReactNode } from 'react';
 import Header from '@/components/Header';
-import AuthListener from '@/components/AuthListener';
+import type { ReactNode } from 'react';
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'KelevKef',
-  description: 'Сервис по выгулу и передержке собак в Израиле',
+  description: 'Сервис поиска исполнителей для прогулки с собаками',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
-      <body className="bg-gray-100 min-h-screen text-gray-800">
-        <AuthListener />
+      <body className="bg-gray-100">
         <Header />
-        <main className="max-w-4xl mx-auto p-4">{children}</main>
+        <main>{children}</main>
       </body>
     </html>
   );

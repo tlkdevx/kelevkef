@@ -1,87 +1,71 @@
+// Файл: app/signup/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    setErrorMsg(null);
+    setIsLoading(true);
 
-    // Регистрируем пользователя
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          name, // попадёт в user.user_metadata.name
-        },
-      },
     });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
+    if (error || !data.user) {
+      setErrorMsg(error?.message || 'Не удалось зарегистрироваться');
+      setIsLoading(false);
       return;
     }
 
-    setLoading(false);
-    alert('Письмо для подтверждения отправлено. Проверьте почту.');
-    router.push('/login');
+    // После регистрации сразу создаём "пустой" профиль (или оставляем его, если не нужно)
+    const userId = data.user.id;
+    await supabase.from('profiles').upsert(
+      { user_id: userId, full_name: '', city: '', about: '', price_per_walk: 0 },
+      { onConflict: 'user_id' }
+    );
+
+    router.push('/dashboard');
+    setIsLoading(false);
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 bg-white p-6 rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Регистрация</h1>
-      <form onSubmit={handleSignup} className="space-y-4">
-        <div>
-          <label className="block mb-1 font-medium">Имя</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-        </div>
-        <div>
-          <label className="block mb-1 font-medium">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            required
-            autoComplete="email"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 font-medium">Пароль</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            required
-            autoComplete="current-password"
-          />
-        </div>
-        {error && <p className="text-red-600">{error}</p>}
+    <div className="max-w-md mx-auto mt-8 p-4 bg-white rounded shadow">
+      <h1 className="text-2xl font-semibold mb-4">Регистрация</h1>
+      {errorMsg && <p className="text-red-600 mb-2">{errorMsg}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          required
+        />
+        <input
+          type="password"
+          placeholder="Пароль"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          required
+        />
         <button
           type="submit"
-          className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700"
-          disabled={loading}
+          disabled={isLoading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? 'Загрузка...' : 'Зарегистрироваться'}
+          {isLoading ? 'Регистрируем...' : 'Зарегистрироваться'}
         </button>
       </form>
     </div>

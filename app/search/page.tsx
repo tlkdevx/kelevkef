@@ -1,96 +1,178 @@
+// Файл: app/search/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
-import Image from 'next/image';
-import Link from 'next/link';
+import type { Database } from '@/types/supabase';
+import { Icon } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import styles from './page.module.css';
+
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
 
 type Profile = {
+  id: string;
   user_id: string;
-  full_name: string | null;
+  full_name: string;
   avatar_url: string | null;
   city: string | null;
-  price_per_walk: number | null;
-  rating: number | null;
-  about: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export default function SearchPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [cityFilter, setCityFilter] = useState('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const defaultCenter: [number, number] = [32.0853, 34.7818];
+  const defaultZoom = 11;
+
+  const markerIcon = new Icon({
+    iconUrl:
+      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconRetinaUrl:
+      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    shadowUrl:
+      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  });
 
   useEffect(() => {
     const fetchProfiles = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .order('rating', { ascending: false });
+        .select(
+          'id, user_id, full_name, avatar_url, city, latitude, longitude'
+        )
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
 
       if (error) {
-        console.error('Ошибка при получении профилей:', error);
-      } else {
-        setProfiles(data as Profile[] || []);
+        console.error('Ошибка при запросе профилей:', error);
+        setError('Не удалось загрузить список исполнителей.');
+        setLoading(false);
+        return;
       }
+
+      setProfiles(data as Profile[]);
+      setLoading(false);
     };
 
     fetchProfiles();
   }, []);
 
-  const filteredProfiles = profiles.filter((p) =>
-    cityFilter
-      ? p.city?.toLowerCase().includes(cityFilter.toLowerCase())
-      : true
-  );
-
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Доступные исполнители</h1>
+    <div className={styles.container}>
+      <h1 className={styles.title}>Поиск исполнителей</h1>
 
-      <input
-        type="text"
-        placeholder="Поиск по городу"
-        value={cityFilter}
-        onChange={(e) => setCityFilter(e.target.value)}
-        className="w-full md:w-1/2 border px-3 py-2 rounded mb-6"
-      />
+      {loading && <p className={styles.status}>Загрузка...</p>}
+      {error && <p className={styles.error}>{error}</p>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProfiles.map((profile) => (
-          <Link key={profile.user_id} href={`/profile/${profile.user_id}`}>
-            <div className="border p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer bg-white">
-              <div className="flex items-center gap-4 mb-3">
-                <Image
-                  src={profile.avatar_url || '/default-avatar.png'}
-                  alt={profile.full_name || ''}
-                  width={60}
-                  height={60}
-                  className="rounded-full object-cover"
-                />
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {profile.full_name || 'Имя не указано'}
-                  </h2>
-                  <p className="text-gray-500">
-                    {profile.city || 'Город не указан'}
-                  </p>
+      {!loading && !error && (
+        <div className={styles.contentWrapper}>
+          <div className={styles.list}>
+            {profiles.length === 0 && (
+              <p className={styles.empty}>Нет доступных исполнителей.</p>
+            )}
+            {profiles.map((p) => (
+              <div key={p.user_id} className={styles.card}>
+                <div className={styles.cardHeader}>
+                  {p.avatar_url ? (
+                    <img
+                      src={p.avatar_url}
+                      alt={p.full_name}
+                      className={styles.avatar}
+                    />
+                  ) : (
+                    <div className={styles.avatarPlaceholder}>
+                      {p.full_name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className={styles.info}>
+                    <p className={styles.name}>{p.full_name}</p>
+                    <p className={styles.city}>
+                      {p.city || 'Город не указан'}
+                    </p>
+                  </div>
+                </div>
+                <div className={styles.actions}>
+                  <a href={`/profile/${p.user_id}`} className={styles.button}>
+                    Профиль
+                  </a>
+                  <a
+                    href={`/orders/create?executorId=${p.user_id}`}
+                    className={`${styles.button} ${styles.primaryButton}`}
+                  >
+                    Заказать
+                  </a>
                 </div>
               </div>
-              <p className="text-sm text-gray-700 mb-2">
-                {profile.about
-                  ? `${profile.about.slice(0, 80)}...`
-                  : 'Нет описания'}
-              </p>
-              <div className="text-sm text-blue-600">
-                {profile.price_per_walk !== null
-                  ? `₪${profile.price_per_walk} / прогулка`
-                  : 'Цена не указана'}
-                {' · '}
-                ⭐ {profile.rating?.toFixed(1) ?? '0.0'}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+            ))}
+          </div>
+
+          <div className={styles.mapWrapper}>
+            <MapContainer
+              center={defaultCenter}
+              zoom={defaultZoom}
+              scrollWheelZoom={true}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution="&copy; OpenStreetMap contributors"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {profiles.map((p) => {
+                if (p.latitude !== null && p.longitude !== null) {
+                  return (
+                    <Marker
+                      key={p.user_id}
+                      position={[p.latitude, p.longitude]}
+                      icon={markerIcon}
+                    >
+                      <Popup>
+                        <div className={styles.popup}>
+                          <p className={styles.popupName}>{p.full_name}</p>
+                          <p className={styles.popupCity}>
+                            {p.city || 'Город не указан'}
+                          </p>
+                          <a
+                            href={`/profile/${p.user_id}`}
+                            className={styles.popupLink}
+                          >
+                            Смотреть профиль
+                          </a>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                }
+                return null;
+              })}
+            </MapContainer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,48 +1,47 @@
+// Файл: app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [email, setEmail] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+    const fetchSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session?.user) {
         router.push('/login');
         return;
       }
-      const userId = session.user.id;
-
-      const { data: prof, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (!error) setProfile(prof);
+      setEmail(session.user.email);
       setLoading(false);
     };
-    fetchDashboard();
+    fetchSession();
   }, [router]);
 
-  if (loading) return <div className="p-6">Загрузка...</div>;
-  if (!profile) return <div className="p-6 text-red-500">Профиль не найден</div>;
+  if (loading) {
+    return <div className="p-6">Загрузка…</div>;
+  }
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Мой кабинет</h1>
-      <p>Привет, {profile.full_name || 'Пользователь'}!</p>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">
+        Добро пожаловать, {email}
+      </h1>
       <button
         onClick={() => router.push('/profile/edit')}
-        className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
       >
         Редактировать профиль
       </button>
+      <div className="mt-6">
+        <p>Здесь ваша панель управления (заказы, статистика и т.д.).</p>
+      </div>
     </div>
   );
 }

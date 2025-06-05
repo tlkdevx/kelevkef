@@ -1,3 +1,17 @@
+/* Файл: styles/globals.css */
+
+/* --- ВСТАВЬТЕ СЮДА В ПЕРВУЮ ОЧЕРЕДЬ: Leaflet CSS --- */
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+
+/* -------------------------------------------------- */
+/* Здесь уже идут ваши существующие глобальные стили */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+
+/* ... остальной ваш CSS ... */
 @import "tailwindcss";
 
 :root {
