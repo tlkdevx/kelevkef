@@ -1,7 +1,8 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { ReactNode } from 'react';
-import Header from '../components/Header';
+import Header from '@/components/Header';
+import AuthListener from '@/components/AuthListener';
 
 export const metadata: Metadata = {
   title: 'KelevKef',
@@ -12,6 +13,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
       <body className="bg-gray-100 min-h-screen text-gray-800">
+        <AuthListener />
         <Header />
         <main className="max-w-4xl mx-auto p-4">{children}</main>
       </body>

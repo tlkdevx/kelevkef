@@ -1,29 +1,59 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
 
-type Params = {
-  params: {
-    id: string;
-  };
+type ProfileType = {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  price_per_walk: number | null;
+  rating: number | null;
+  about: string | null;
 };
 
-export default async function ProfilePage({ params }: Params) {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', params.id)
-    .single();
+export default function ProfilePage() {
+  const params = useParams();
+  const id = params?.id as string;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const [profile, setProfile] = useState<ProfileType | null>(null);
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const isOwnProfile = session?.user?.id === profile?.id;
+  useEffect(() => {
+    const fetchProfile = async () => {
+      // 1) Узнаём, кто сейчас залогинен
+      const { data: { session } } = await supabase.auth.getSession();
+      setSessionUserId(session?.user?.id ?? null);
 
-  if (error || !profile) {
-    return <div className="p-4 text-red-500">Ошибка загрузки профиля</div>;
-  }
+      // 2) Получаем профиль из таблицы по user_id = id
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', id)
+        .single();
+
+      if (error || !data) {
+        setErrorMsg('Ошибка загрузки профиля');
+      } else {
+        setProfile(data as ProfileType);
+      }
+      setLoading(false);
+    };
+
+    fetchProfile();
+  }, [id]);
+
+  if (loading) return <div className="p-6">Загрузка...</div>;
+  if (errorMsg) return <div className="p-6 text-red-500">{errorMsg}</div>;
+  if (!profile) return null;
+
+  const isOwnProfile = sessionUserId === profile.user_id;
 
   return (
     <div className="p-6 max-w-xl mx-auto">
@@ -38,7 +68,7 @@ export default async function ProfilePage({ params }: Params) {
         <div>
           <h1 className="text-2xl font-bold">{profile.full_name || 'Имя не указано'}</h1>
           <p className="text-gray-600">{profile.city || 'Город не указан'}</p>
-          {profile.rating !== undefined && (
+          {profile.rating !== null && (
             <p className="text-yellow-500 mt-1">⭐ {profile.rating.toFixed(1)}</p>
           )}
         </div>
@@ -46,10 +76,7 @@ export default async function ProfilePage({ params }: Params) {
 
       {isOwnProfile && (
         <div className="mt-4">
-          <Link
-            href="/profile/edit"
-            className="text-blue-600 hover:underline"
-          >
+          <Link href="/profile/edit" className="text-blue-600 hover:underline">
             ✏️ Редактировать профиль
           </Link>
         </div>
@@ -60,7 +87,7 @@ export default async function ProfilePage({ params }: Params) {
       </div>
 
       <div className="mt-6">
-        {profile.price_per_walk !== undefined && (
+        {profile.price_per_walk !== null && (
           <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
             Забронировать прогулку за ₪{profile.price_per_walk}
           </button>

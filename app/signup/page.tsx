@@ -17,22 +17,25 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.signUp({
+    // Регистрируем пользователя
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
+        data: {
+          name, // попадёт в user.user_metadata.name
+        },
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
 
     setLoading(false);
-    alert('Письмо для подтверждения отправлено!');
+    alert('Письмо для подтверждения отправлено. Проверьте почту.');
     router.push('/login');
   };
 

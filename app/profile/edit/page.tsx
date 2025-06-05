@@ -6,54 +6,50 @@ import { supabase } from '@/lib/supabaseClient';
 
 export default function EditProfilePage() {
   const router = useRouter();
+
   const [form, setForm] = useState({
     full_name: '',
     city: '',
     about: '',
     price_per_walk: '',
   });
-
   const [loading, setLoading] = useState(true);
-  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    const init = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (error || !session?.user) {
+    const fetchProfile = async () => {
+      // 1) Получаем сессию
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user) {
         router.push('/login');
         return;
       }
+      const userId = session.user.id;
 
-      setSessionUserId(session.user.id);
-
-      const { data, error: profileError } = await supabase
+      // 2) Получаем профиль из таблицы по user_id
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('user_id', userId)
         .single();
 
-      if (profileError || !data) {
+      if (profileError || !profile) {
         setErrorMsg('Не удалось загрузить профиль');
         setLoading(false);
         return;
       }
 
       setForm({
-        full_name: data.full_name || '',
-        city: data.city || '',
-        about: data.about || '',
-        price_per_walk: data.price_per_walk?.toString() || '',
+        full_name: profile.full_name || '',
+        city: profile.city || '',
+        about: profile.about || '',
+        price_per_walk: profile.price_per_walk?.toString() || '',
       });
 
       setLoading(false);
     };
 
-    init();
+    fetchProfile();
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -63,22 +59,38 @@ export default function EditProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sessionUserId) return;
+    setErrorMsg('');
 
+    // 1) Проверим цену
+    const price = parseFloat(form.price_per_walk);
+    if (isNaN(price) || price < 0) {
+      setErrorMsg('Введите корректную цену');
+      return;
+    }
+
+    // 2) Получаем текущую сессию ещё раз
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user) {
+      setErrorMsg('Сессия не найдена');
+      return;
+    }
+    const userId = session.user.id;
+
+    // 3) Выполняем обновление напрямую
     const { error } = await supabase
       .from('profiles')
       .update({
-        full_name: form.full_name,
-        city: form.city,
-        about: form.about,
-        price_per_walk: Number(form.price_per_walk),
+        full_name: form.full_name.trim(),
+        city: form.city.trim(),
+        about: form.about.trim(),
+        price_per_walk: price,
       })
-      .eq('id', sessionUserId);
+      .eq('user_id', userId);
 
     if (error) {
-      setErrorMsg('Ошибка при сохранении');
+      setErrorMsg('Ошибка при сохранении: ' + error.message);
     } else {
-      router.push(`/profile/${sessionUserId}`);
+      router.push(`/profile/${userId}`);
     }
   };
 
@@ -98,6 +110,7 @@ export default function EditProfilePage() {
           value={form.full_name}
           onChange={handleChange}
           className="w-full border p-2 rounded"
+          required
         />
         <input
           type="text"
@@ -121,6 +134,9 @@ export default function EditProfilePage() {
           value={form.price_per_walk}
           onChange={handleChange}
           className="w-full border p-2 rounded"
+          min="0"
+          step="0.01"
+          required
         />
         <button
           type="submit"
