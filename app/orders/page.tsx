@@ -1,4 +1,4 @@
-// Файл: app/orders/page.tsx
+// app/orders/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -54,12 +54,12 @@ export default function ExecutorOrdersPage() {
       const fetchedOrders: OrderData[] = result.orders;
       setOrders(fetchedOrders);
 
-      // Собираем уникальные client_id
+      // Уникальные client_id
       const uniqueClientIds = Array.from(
         new Set(fetchedOrders.map((o) => o.client_id))
       );
 
-      // Запрашиваем данные профилей клиентов
+      // Запрос профилей клиентов
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name, avatar_url')
@@ -88,7 +88,6 @@ export default function ExecutorOrdersPage() {
     orderId: string,
     newStatus: 'confirmed' | 'declined'
   ) => {
-    // Отправляем PUT-запрос на изменение статуса
     const response = await fetch('/api/update-order-status', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -99,11 +98,8 @@ export default function ExecutorOrdersPage() {
       alert(result.error || 'Не удалось обновить статус заказа');
       return;
     }
-    // Обновляем локально
     setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, status: newStatus } : o
-      )
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     );
   };
 
@@ -113,103 +109,103 @@ export default function ExecutorOrdersPage() {
 
   return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">
-        Мои заказы (как исполнитель)
-      </h1>
+      <h1 className="text-2xl font-bold mb-4">Мои заказы (как исполнитель)</h1>
       {errorMsg && <p className="text-red-600 mb-4">{errorMsg}</p>}
       {orders.length === 0 ? (
         <p>У вас нет заказов.</p>
       ) : (
-        <ul className="space-y-6">
-          {orders.map((order) => {
-            const client = clientProfiles[order.client_id];
-            return (
-              <li
-                key={order.id}
-                className="border p-4 rounded hover:shadow transition"
+        <ul className="space-y-4">
+          {orders.map((order) => (
+            <li
+              key={order.id}
+              className="border p-4 rounded hover:shadow transition"
+            >
+              <div className="flex items-center gap-4">
+                {clientProfiles[order.client_id]?.avatar_url ? (
+                  <img
+                    src={clientProfiles[order.client_id]?.avatar_url!}
+                    alt={clientProfiles[order.client_id]?.full_name!}
+                    className="w-12 h-12 rounded-full"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
+                    {clientProfiles[order.client_id]
+                      ? clientProfiles[order.client_id]?.full_name?.charAt(0).toUpperCase()
+                      : '?'}
+                  </div>
+                )}
+                <div>
+                  <p>
+                    <strong>Клиент:</strong>{' '}
+                    {clientProfiles[order.client_id]?.full_name}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Заказ создан:{' '}
+                    {new Date(order.inserted_at).toLocaleString('ru-RU')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <p>
+                  <strong>Дата прогулки:</strong>{' '}
+                  {new Date(order.date).toLocaleString('ru-RU')}
+                </p>
+                <p>
+                  <strong>Адрес:</strong> {order.address}
+                </p>
+                <p>
+                  <strong>Детали:</strong> {order.details || '—'}
+                </p>
+                <p>
+                  <strong>Статус:</strong>{' '}
+                  {order.status === 'pending' && 'Ожидаем'}
+                  {order.status === 'confirmed' && 'Подтверждено'}
+                  {order.status === 'declined' && 'Отменено'}
+                </p>
+              </div>
+
+              {order.status === 'pending' && (
+                <div className="mt-4 flex gap-4">
+                  <button
+                    onClick={() =>
+                      handleStatusChange(order.id, 'confirmed')
+                    }
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+                  >
+                    Принять
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleStatusChange(order.id, 'declined')
+                    }
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+                  >
+                    Отказать
+                  </button>
+                </div>
+              )}
+
+              {order.status === 'confirmed' && (
+                <p className="mt-4 text-green-700 font-medium">
+                  ✅ Заказ подтверждён
+                </p>
+              )}
+
+              {order.status === 'declined' && (
+                <p className="mt-4 text-red-700 font-medium">
+                  ❌ Заказ был отклонён
+                </p>
+              )}
+
+              <button
+                onClick={() => router.push(`/profile/${order.client_id}`)}
+                className="mt-2 text-blue-600 hover:underline"
               >
-                <div className="flex items-center gap-4">
-                  {client?.avatar_url ? (
-                    <img
-                      src={client.avatar_url}
-                      alt={client.full_name}
-                      className="w-12 h-12 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      {client
-                        ? client.full_name.charAt(0).toUpperCase()
-                        : '?'}
-                    </div>
-                  )}
-                  <div>
-                    <p>
-                      <strong>Клиент:</strong>{' '}
-                      {client ? client.full_name : '—'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Заказ создан:{' '}
-                      {new Date(order.inserted_at).toLocaleString(
-                        'ru-RU'
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <p>
-                    <strong>Дата прогулки:</strong>{' '}
-                    {new Date(order.date).toLocaleString('ru-RU')}
-                  </p>
-                  <p>
-                    <strong>Адрес:</strong> {order.address}
-                  </p>
-                  <p>
-                    <strong>Детали:</strong> {order.details || '—'}
-                  </p>
-                  <p>
-                    <strong>Статус:</strong>{' '}
-                    {order.status === 'pending' && 'Ожидаем'}
-                    {order.status === 'confirmed' && 'Подтверждено'}
-                    {order.status === 'declined' && 'Отменено'}
-                  </p>
-                </div>
-
-                {order.status === 'pending' && (
-                  <div className="mt-4 flex gap-4">
-                    <button
-                      onClick={() =>
-                        handleStatusChange(order.id, 'confirmed')
-                      }
-                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
-                    >
-                      Принять
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleStatusChange(order.id, 'declined')
-                      }
-                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-                    >
-                      Отказать
-                    </button>
-                  </div>
-                )}
-
-                {order.status === 'confirmed' && (
-                  <p className="mt-4 text-green-700 font-medium">
-                    ✅ Заказ подтверждён
-                  </p>
-                )}
-
-                {order.status === 'declined' && (
-                  <p className="mt-4 text-red-700 font-medium">
-                    ❌ Заказ был отклонён
-                  </p>
-                )}
-              </li>
-            );
-          })}
+                Посмотреть профиль клиента
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </div>

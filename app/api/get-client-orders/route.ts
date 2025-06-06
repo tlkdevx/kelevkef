@@ -1,4 +1,4 @@
-// Файл: app/api/get-client-orders/route.ts
+// app/api/get-client-orders/route.ts
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -21,10 +21,12 @@ export async function GET(request: NextRequest) {
     }
     const clientId = session.user.id;
 
-    // 2) Получаем все заказы, где client_id = текущий пользователь
+    // 2) Получаем заказы по client_id
     const { data, error } = await supabaseServer
       .from('orders')
-      .select('id, client_id, executor_id, date, address, details, status, inserted_at')
+      .select(
+        'id, client_id, executor_id, date, address, details, status, inserted_at'
+      )
       .eq('client_id', clientId)
       .order('date', { ascending: true });
 

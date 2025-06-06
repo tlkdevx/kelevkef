@@ -1,4 +1,4 @@
-// Файл: app/api/update-order-status/route.ts
+// app/api/update-order-status/route.ts
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 3) Проверяем, что заказ действительно принадлежит этому исполнителю
+    // 3) Проверяем, что заказ принадлежит этому исполнителю
     const { data: existingOrder, error: fetchError } = await supabaseServer
       .from('orders')
       .select('executor_id, status')
@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 4) Обновляем поле status
+    // 4) Update status
     const { data, error } = await supabaseAdmin
       .from('orders')
       .update({ status: newStatus })

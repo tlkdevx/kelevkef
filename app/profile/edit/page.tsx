@@ -1,4 +1,4 @@
-// Файл: app/profile/edit/page.tsx
+// app/profile/edit/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';

@@ -1,15 +1,16 @@
-// Файл: components/Header.tsx
+// components/Header.tsx
 'use client';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function Header() {
+  const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    // Получаем текущего пользователя
     const getUser = async () => {
       const {
         data: { user },
@@ -19,7 +20,6 @@ export default function Header() {
 
     getUser();
 
-    // Подписываемся на изменения сессии
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
       getUser();
     });
@@ -32,6 +32,7 @@ export default function Header() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUserEmail(null);
+    router.push('/');
   };
 
   const linkClass = 'text-gray-700 hover:text-black transition';

@@ -1,4 +1,4 @@
-// Файл: app/orders/client/page.tsx
+// app/orders/client/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -53,7 +53,7 @@ export default function ClientOrdersPage() {
       const fetchedOrders: OrderData[] = result.orders;
       setOrders(fetchedOrders);
 
-      // Собираем уникальные executor_id
+      // Уникальные executor_id
       const uniqueExecutorIds = Array.from(
         new Set(fetchedOrders.map((o) => o.executor_id))
       );
@@ -65,7 +65,10 @@ export default function ClientOrdersPage() {
         .in('user_id', uniqueExecutorIds);
 
       if (!profilesData || profilesError) {
-        console.error('Не удалось получить профили исполнителей', profilesError);
+        console.error(
+          'Не удалось получить профили исполнителей',
+          profilesError
+        );
       } else {
         const profileMap: { [key: string]: ExecutorProfile } = {};
         profilesData.forEach((p) => {
@@ -94,70 +97,65 @@ export default function ClientOrdersPage() {
       {orders.length === 0 ? (
         <p>Вы ещё не сделали ни одного заказа.</p>
       ) : (
-        <ul className="space-y-6">
-          {orders.map((order) => {
-            const executor = executorProfiles[order.executor_id];
-            return (
-              <li
-                key={order.id}
-                className="border p-4 rounded hover:shadow transition"
-              >
-                <div className="flex items-center gap-4">
-                  {executor?.avatar_url ? (
-                    <img
-                      src={executor.avatar_url}
-                      alt={executor.full_name}
-                      className="w-12 h-12 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      {executor
-                        ? executor.full_name.charAt(0).toUpperCase()
-                        : '?'}
-                    </div>
-                  )}
-                  <div>
-                    <p>
-                      <strong>Исполнитель:</strong>{' '}
-                      {executor ? executor.full_name : '—'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Заказ создан:{' '}
-                      {new Date(order.inserted_at).toLocaleString('ru-RU')}
-                    </p>
+        <ul className="space-y-4">
+          {orders.map((order) => (
+            <li
+              key={order.id}
+              className="border p-4 rounded hover:shadow transition"
+            >
+              <div className="flex items-center gap-4">
+                {executorProfiles[order.executor_id]?.avatar_url ? (
+                  <img
+                    src={executorProfiles[order.executor_id]?.avatar_url!}
+                    alt={executorProfiles[order.executor_id]?.full_name!}
+                    className="w-12 h-12 rounded-full"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
+                    {executorProfiles[order.executor_id]
+                      ? executorProfiles[order.executor_id]?.full_name.charAt(0).toUpperCase()
+                      : '?'}
                   </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
+                )}
+                <div>
                   <p>
-                    <strong>Дата прогулки:</strong>{' '}
-                    {new Date(order.date).toLocaleString('ru-RU')}
+                    <strong>Исполнитель:</strong>{' '}
+                    {executorProfiles[order.executor_id]?.full_name}
                   </p>
-                  <p>
-                    <strong>Адрес:</strong> {order.address}
-                  </p>
-                  <p>
-                    <strong>Детали:</strong> {order.details || '—'}
-                  </p>
-                  <p>
-                    <strong>Статус:</strong>{' '}
-                    {order.status === 'pending' && 'Ожидаем'}
-                    {order.status === 'confirmed' && 'Подтверждено'}
-                    {order.status === 'declined' && 'Отменено'}
+                  <p className="text-sm text-gray-500">
+                    Заказ создан:{' '}
+                    {new Date(order.inserted_at).toLocaleString('ru-RU')}
                   </p>
                 </div>
+              </div>
 
-                <button
-                  onClick={() =>
-                    router.push(`/profile/${order.executor_id}`)
-                  }
-                  className="mt-4 text-blue-600 hover:underline"
-                >
-                  Посмотреть профиль исполнителя
-                </button>
-              </li>
-            );
-          })}
+              <div className="mt-4 space-y-2">
+                <p>
+                  <strong>Дата прогулки:</strong>{' '}
+                  {new Date(order.date).toLocaleString('ru-RU')}
+                </p>
+                <p>
+                  <strong>Адрес:</strong> {order.address}
+                </p>
+                <p>
+                  <strong>Детали:</strong> {order.details || '—'}
+                </p>
+                <p>
+                  <strong>Статус:</strong>{' '}
+                  {order.status === 'pending' && 'Ожидаем'}
+                  {order.status === 'confirmed' && 'Подтверждено'}
+                  {order.status === 'declined' && 'Отменено'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => router.push(`/profile/${order.executor_id}`)}
+                className="mt-2 text-blue-600 hover:underline"
+              >
+                Посмотреть профиль исполнителя
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </div>

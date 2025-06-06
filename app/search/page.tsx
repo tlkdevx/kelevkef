@@ -1,4 +1,4 @@
-// Файл: app/search/page.tsx
+// app/search/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -62,7 +62,9 @@ export default function SearchPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, avatar_url, city, latitude, longitude')
+        .select(
+          'id, user_id, full_name, avatar_url, city, latitude, longitude'
+        )
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 

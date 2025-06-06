@@ -1,4 +1,4 @@
-// Файл: app/api/create-order/route.ts
+// app/api/create-order/route.ts
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -8,7 +8,7 @@ import type { Database } from '@/types/supabase';
 
 interface CreateOrderBody {
   executorId: string;
-  date: string;       // ISO-строка, например "2025-06-10T14:00"
+  date: string; // ISO-строка, например "2025-06-10T14:00"
   address: string;
   details?: string;
 }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
     const clientId = session.user.id;
 
-    // 2) Читаем тело запроса
+    // 2) Читаем тело
     const body: CreateOrderBody = await request.json();
     const { executorId, date, address, details } = body;
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3) Вставляем запись в таблицу orders
+    // 3) Вставляем заказ
     const { data, error } = await supabaseAdmin
       .from('orders')
       .insert([

@@ -1,4 +1,4 @@
-// Файл: app/profile/[id]/page.tsx
+// app/profile/[id]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
