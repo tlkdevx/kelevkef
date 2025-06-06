@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import Avatar from '@/components/Avatar';
 
 interface ProfileData {
   full_name?: string;
@@ -62,14 +63,10 @@ export default function ProfileViewPage() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">{profile?.full_name}</h1>
-      {profile?.avatar_url && (
-        <img
-          src={profile.avatar_url}
-          alt={profile.full_name}
-          className="w-24 h-24 rounded-full mb-4"
-        />
-      )}
+      <div className="flex items-center gap-4 mb-4">
+        <Avatar url={profile?.avatar_url || null} name={profile?.full_name || 'Пользователь'} size={64} />
+        <h1 className="text-2xl font-bold">{profile?.full_name}</h1>
+      </div>
       <p>
         <strong>Город:</strong> {profile?.city || 'не указан'}
       </p>

@@ -1,4 +1,4 @@
-// app/page.tsx
+// Файл: app/page.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -25,7 +25,15 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-100 to-green-200 text-center px-4">
+    /* 
+      - flex flex-col: контейнер-колонка
+      - justify-center: центруем контент по вертикали (в пределах viewport)
+      - items-center: по горизонтали
+      - min-h-screen: гарантируем, что зелёный фон займёт всю высоту экрана (100vh)
+      - bg-gradient-to-br from-green-100 to-green-200: градиентный фон
+      - px-4: боковые отступы
+    */
+    <div className="flex flex-col justify-center items-center bg-gradient-to-br from-green-100 to-green-200 text-center px-4 min-h-screen">
       <div className="mb-8">
         <span className="text-6xl">🐶</span>
         <h1 className="mt-4 text-5xl font-extrabold text-gray-800">

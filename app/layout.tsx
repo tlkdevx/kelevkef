@@ -1,19 +1,29 @@
 // Файл: app/layout.tsx
 import './globals.css';
+import Footer from '@/components/Footer';
 import Header from '@/components/Header';
-import type { ReactNode } from 'react';
 
 export const metadata = {
   title: 'KelevKef',
-  description: 'Сервис поиска исполнителей для прогулки с собаками',
+  description: 'Сервис по прогулке с питомцами',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ru">
-      <body className="bg-gray-100">
+      <body className="flex flex-col min-h-screen bg-gray-50">
+        {/* Хедер */}
         <Header />
-        <main>{children}</main>
+
+        {/* Основной контент страницы */}
+        <main className="flex-grow">{children}</main>
+
+        {/* Футер */}
+        <Footer />
       </body>
     </html>
   );

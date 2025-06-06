@@ -1,13 +1,14 @@
-// app/profile/edit/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import Avatar from '@/components/Avatar';
 
 export default function EditProfilePage() {
   const router = useRouter();
 
+  // Состояния формы
   const [form, setForm] = useState({
     full_name: '',
     city: '',
@@ -16,8 +17,16 @@ export default function EditProfilePage() {
     latitude: '',
     longitude: '',
   });
+
+  // Состояния для аватарки
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [uploadedFilename, setUploadedFilename] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string>('');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -51,7 +60,7 @@ export default function EditProfilePage() {
         latitude: profile.latitude?.toString() || '',
         longitude: profile.longitude?.toString() || '',
       });
-
+      setAvatarUrl(profile.avatar_url || null);
       setLoading(false);
     };
 
@@ -63,6 +72,52 @@ export default function EditProfilePage() {
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      setAvatarFile(file);
+      setUploadedFilename(file.name);
+      setUploadProgress(0);
+    }
+  };
+
+  // Загрузка аватарки пользователя с установкой uploadProgress = 100 после завершения
+  const uploadAvatar = async (userId: string) => {
+    try {
+      if (!avatarFile) return null;
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const filePath = fileName;
+
+      // Перед стартом гарантируем, что полоса прогресса обнуляется
+      setUploadProgress(0);
+
+      // Загружаем напрямую (без presigned URL)
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (error) {
+        console.error('Ошибка загрузки аватарки:', error.message);
+        return null;
+      }
+
+      // Поскольку Supabase JS SDK не возвращает прогресс, просто ставим 100% после завершения
+      setUploadProgress(100);
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      return publicUrl;
+    } catch (err: any) {
+      console.error('Unexpected error uploadAvatar:', err.message);
+      return null;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,6 +147,16 @@ export default function EditProfilePage() {
     }
     const userId = session.user.id;
 
+    // 1) Загрузить новый аватар (если выбран)
+    let newAvatarUrl = avatarUrl;
+    if (avatarFile) {
+      const uploadedUrl = await uploadAvatar(userId);
+      if (uploadedUrl) {
+        newAvatarUrl = uploadedUrl;
+      }
+    }
+
+    // 2) Обновляем профиль
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -101,6 +166,7 @@ export default function EditProfilePage() {
         price_per_walk: price,
         latitude: latNum,
         longitude: lonNum,
+        avatar_url: newAvatarUrl,
       })
       .eq('user_id', userId);
 
@@ -118,10 +184,53 @@ export default function EditProfilePage() {
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-4">Редактировать профиль</h1>
+      <div className="flex items-center gap-4 mb-4">
+        <Avatar
+          url={avatarUrl}
+          name={form.full_name || 'Пользователь'}
+          size={64}
+        />
+      </div>
+
+      {/* Блок выбора файла с отображением имени файла и прогресса */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1 underline cursor-pointer">
+          Сменить аватар (необязательно)
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </label>
+        {uploadedFilename && (
+          <p className="text-gray-600 text-sm">
+            Выбран файл: <span className="font-medium">{uploadedFilename}</span>
+          </p>
+        )}
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div
+              className="bg-green-500 h-2 rounded-full"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        )}
+        {uploadProgress === 100 && (
+          <p className="text-green-600 text-sm mt-1">
+            Файл полностью загружен
+          </p>
+        )}
+      </div>
+
       {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="full_name" className="block text-sm font-medium">
+          <label
+            htmlFor="full_name"
+            className="block text-sm font-medium"
+          >
             Имя
           </label>
           <input

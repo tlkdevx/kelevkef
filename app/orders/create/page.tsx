@@ -11,12 +11,22 @@ interface ExecutorProfile {
   avatar_url?: string;
 }
 
+interface Pet {
+  id: string;
+  name: string;
+  pet_type: string;
+}
+
 export default function CreateOrderPage() {
   const router = useRouter();
   const params = useSearchParams();
   const executorId = params.get('executorId') || '';
 
   const [executor, setExecutor] = useState<ExecutorProfile | null>(null);
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
+  const [serviceType, setServiceType] = useState<string>('walk');
+
   const [date, setDate] = useState<string>('');
   const [address, setAddress] = useState<string>('');
   const [details, setDetails] = useState<string>('');
@@ -24,31 +34,52 @@ export default function CreateOrderPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchExecutor = async () => {
+    const fetchExecutorAndPets = async () => {
       if (!executorId) {
         setErrorMsg('Не указан исполнитель');
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: execData, error: execError } = await supabase
         .from('profiles')
         .select('full_name, city, avatar_url')
         .eq('user_id', executorId)
         .single();
-
-      if (error || !data) {
+      if (execError || !execData) {
         setErrorMsg('Исполнитель не найден');
         setLoading(false);
         return;
       }
+      setExecutor(execData);
 
-      setExecutor(data);
+      // Загружаем питомцев текущего пользователя (клиента)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push('/login');
+        return;
+      }
+      const { data: petsData, error: petsError } = await supabase
+        .from('pets')
+        .select('id, name, pet_type')
+        .eq('owner_id', session.user.id);
+
+      if (petsError) {
+        console.error('Ошибка при загрузке питомцев:', petsError);
+      } else if (petsData) {
+        setPets(petsData);
+        if (petsData.length > 0) {
+          setSelectedPetId(petsData[0].id);
+        }
+      }
+
       setLoading(false);
     };
 
-    fetchExecutor();
-  }, [executorId]);
+    fetchExecutorAndPets();
+  }, [executorId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +98,8 @@ export default function CreateOrderPage() {
         date,
         address,
         details,
+        petId: selectedPetId,
+        serviceType,
       }),
     });
 
@@ -99,7 +132,45 @@ export default function CreateOrderPage() {
         <strong>Город исполнителя:</strong> {executor?.city}
       </p>
       {errorMsg && <p className="text-red-600 mb-2">{errorMsg}</p>}
+
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* 1) Выбор питомца */}
+        <div>
+          <label className="block text-sm font-medium">Ваш питомец</label>
+          {pets.length === 0 ? (
+            <p className="text-gray-500">
+              У вас нет питомцев. Добавьте их в Кабинете!
+            </p>
+          ) : (
+            <select
+              value={selectedPetId || ''}
+              onChange={(e) => setSelectedPetId(e.target.value)}
+              className="w-full border px-3 py-2 rounded"
+            >
+              {pets.map((pet) => (
+                <option key={pet.id} value={pet.id}>
+                  {pet.name} ({pet.pet_type})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* 2) Выбор типа услуги */}
+        <div>
+          <label className="block text-sm font-medium">Вид услуги</label>
+          <select
+            value={serviceType}
+            onChange={(e) => setServiceType(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="walk">Погулять</option>
+            <option value="sitting">Посидеть дома</option>
+            <option value="play">Поиграть</option>
+            <option value="transport">Отвезти куда-то</option>
+          </select>
+        </div>
+
         <div>
           <label className="block text-sm font-medium">Дата и время</label>
           <input
@@ -135,6 +206,7 @@ export default function CreateOrderPage() {
         <button
           type="submit"
           className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
+          disabled={pets.length === 0}
         >
           Оформить заказ
         </button>

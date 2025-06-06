@@ -1,14 +1,23 @@
-// app/search/page.tsx
+// Файл: app/search/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
 import type { Database } from '@/types/supabase';
-import { Icon } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import styles from './page.module.css';
 
+type Profile = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  avatar_url: string | null;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+// Динамически импортируем компоненты React-Leaflet, чтобы избежать SSR-ошибок
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
@@ -26,41 +35,21 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-type Profile = {
-  id: string;
-  user_id: string;
-  full_name: string;
-  avatar_url: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-};
-
 export default function SearchPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [markerIcon, setMarkerIcon] = useState<any>(null);
 
+  // Центр карты (Тель-Авив, можно заменить по необходимости)
   const defaultCenter: [number, number] = [32.0853, 34.7818];
   const defaultZoom = 11;
 
-  const markerIcon = new Icon({
-    iconUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    iconRetinaUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    shadowUrl:
-      'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
-  });
-
   useEffect(() => {
+    // Загружаем данные профилей с точками геолокации
     const fetchProfiles = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('profiles')
         .select(
           'id, user_id, full_name, avatar_url, city, latitude, longitude'
@@ -68,8 +57,8 @@ export default function SearchPage() {
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 
-      if (error) {
-        console.error('Ошибка при запросе профилей:', error);
+      if (fetchError) {
+        console.error('Ошибка при запросе профилей:', fetchError);
         setError('Не удалось загрузить список исполнителей.');
         setLoading(false);
         return;
@@ -82,6 +71,25 @@ export default function SearchPage() {
     fetchProfiles();
   }, []);
 
+  useEffect(() => {
+    // Создаём экземпляр L.Icon только на клиенте
+    // (браузерный код, поскольку leaflet обращается к window)
+    import('leaflet').then((L) => {
+      const icon = new L.Icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl:
+          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl:
+          'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      });
+      setMarkerIcon(icon);
+    });
+  }, []);
+
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Поиск исполнителей</h1>
@@ -91,6 +99,7 @@ export default function SearchPage() {
 
       {!loading && !error && (
         <div className={styles.contentWrapper}>
+          {/* Список исполнителей */}
           <div className={styles.list}>
             {profiles.length === 0 && (
               <p className={styles.empty}>Нет доступных исполнителей.</p>
@@ -131,6 +140,7 @@ export default function SearchPage() {
             ))}
           </div>
 
+          {/* Карта исполнителей */}
           <div className={styles.mapWrapper}>
             <MapContainer
               center={defaultCenter}
@@ -142,33 +152,34 @@ export default function SearchPage() {
                 attribution="&copy; OpenStreetMap contributors"
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {profiles.map((p) => {
-                if (p.latitude !== null && p.longitude !== null) {
-                  return (
-                    <Marker
-                      key={p.user_id}
-                      position={[p.latitude, p.longitude]}
-                      icon={markerIcon}
-                    >
-                      <Popup>
-                        <div className={styles.popup}>
-                          <p className={styles.popupName}>{p.full_name}</p>
-                          <p className={styles.popupCity}>
-                            {p.city || 'Город не указан'}
-                          </p>
-                          <a
-                            href={`/profile/${p.user_id}`}
-                            className={styles.popupLink}
-                          >
-                            Смотреть профиль
-                          </a>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  );
-                }
-                return null;
-              })}
+              {markerIcon &&
+                profiles.map((p) => {
+                  if (p.latitude !== null && p.longitude !== null) {
+                    return (
+                      <Marker
+                        key={p.user_id}
+                        position={[p.latitude, p.longitude]}
+                        icon={markerIcon}
+                      >
+                        <Popup>
+                          <div className={styles.popup}>
+                            <p className={styles.popupName}>{p.full_name}</p>
+                            <p className={styles.popupCity}>
+                              {p.city || 'Город не указан'}
+                            </p>
+                            <a
+                              href={`/profile/${p.user_id}`}
+                              className={styles.popupLink}
+                            >
+                              Смотреть профиль
+                            </a>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  }
+                  return null;
+                })}
             </MapContainer>
           </div>
         </div>

@@ -2,5 +2,5 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase';
 
-// Клиентский Supabase‐клиент (App Router, хранит сессию в HTTP-cookie)
+// Клиентский Supabase-клиент (используется в React-компонентах)
 export const supabase = createClientComponentClient<Database>();
