@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="bg-white border-t px-4 py-6">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center text-sm text-gray-600">
         <p className="mb-2 sm:mb-0">
-          © 2025 KelevKef. Все права защищены.
+          © 2025 KelevKef. Все права почти защищены.
         </p>
         <Link
           href="/contacts"
