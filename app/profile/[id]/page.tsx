@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import type { Database } from '@/types/supabase';
 
 interface ProfileData {
   full_name?: string;

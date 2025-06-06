@@ -13,7 +13,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
       if (error || !session?.user) {
         router.push('/login');
         return;

@@ -120,59 +120,98 @@ export default function EditProfilePage() {
       <h1 className="text-2xl font-bold mb-4">Редактировать профиль</h1>
       {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          name="full_name"
-          placeholder="Имя"
-          value={form.full_name}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          name="city"
-          placeholder="Город"
-          value={form.city}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <textarea
-          name="about"
-          placeholder="О себе"
-          value={form.about}
-          onChange={handleChange}
-          className="w-full border p-2 rounded h-24"
-        />
-        <input
-          type="number"
-          name="price_per_walk"
-          placeholder="Цена за прогулку"
-          value={form.price_per_walk}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-          min="0"
-          step="0.01"
-          required
-        />
-        <input
-          type="text"
-          name="latitude"
-          placeholder="Широта"
-          value={form.latitude}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          name="longitude"
-          placeholder="Долгота"
-          value={form.longitude}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-          required
-        />
+        <div>
+          <label htmlFor="full_name" className="block text-sm font-medium">
+            Имя
+          </label>
+          <input
+            type="text"
+            id="full_name"
+            name="full_name"
+            value={form.full_name}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="city" className="block text-sm font-medium">
+            Город
+          </label>
+          <input
+            type="text"
+            id="city"
+            name="city"
+            value={form.city}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="about" className="block text-sm font-medium">
+            О себе
+          </label>
+          <textarea
+            id="about"
+            name="about"
+            value={form.about}
+            onChange={handleChange}
+            className="w-full border p-2 rounded h-24"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="price_per_walk"
+            className="block text-sm font-medium"
+          >
+            Цена за прогулку (₪)
+          </label>
+          <input
+            type="number"
+            id="price_per_walk"
+            name="price_per_walk"
+            value={form.price_per_walk}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            min="0"
+            step="0.01"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="latitude" className="block text-sm font-medium">
+            Широта
+          </label>
+          <input
+            type="text"
+            id="latitude"
+            name="latitude"
+            value={form.latitude}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="longitude" className="block text-sm font-medium">
+            Долгота
+          </label>
+          <input
+            type="text"
+            id="longitude"
+            name="longitude"
+            value={form.longitude}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            required
+          />
+        </div>
+
         <button
           type="submit"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"

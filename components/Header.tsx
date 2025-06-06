@@ -9,6 +9,7 @@ export default function Header() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    // Получаем текущего пользователя
     const getUser = async () => {
       const {
         data: { user },
@@ -18,6 +19,7 @@ export default function Header() {
 
     getUser();
 
+    // Подписываемся на изменения сессии
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
       getUser();
     });
@@ -47,6 +49,18 @@ export default function Header() {
           <Link href="/search" className={linkClass}>
             Найти догситтера
           </Link>
+
+          {userEmail && (
+            <>
+              <Link href="/orders" className={linkClass}>
+                Мои заказы (исполнитель)
+              </Link>
+              <Link href="/orders/client" className={linkClass}>
+                Мои заказы (клиент)
+              </Link>
+            </>
+          )}
+
           {userEmail ? (
             <>
               <Link href="/dashboard" className={linkClass}>
