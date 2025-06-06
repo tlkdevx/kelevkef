@@ -1,3 +1,4 @@
+// Файл: app/pets/page.tsx
 'use client';
 
 import { useEffect, useState, ChangeEvent } from 'react';
@@ -69,6 +70,7 @@ export default function PetsPage() {
     const file = e.target.files ? e.target.files[0] : null;
     setPetFile(file);
     setUploadedFilename(file ? file.name : '');
+    setUploadProgress(0);
   };
 
   // Загрузка фото питомца с индикацией прогресса
@@ -114,7 +116,8 @@ export default function PetsPage() {
           resolve(null);
         };
 
-        xhr.open('PUT', presignData.signedURL, true);
+        // ЗДЕСЬ ИСПОЛЬЗУЕМ presignData.signedUrl (не signedURL)
+        xhr.open('PUT', presignData.signedUrl, true);
         xhr.setRequestHeader('x-upsert', 'true');
         xhr.send(petFile);
       });
@@ -257,7 +260,7 @@ export default function PetsPage() {
               onChange={(e) =>
                 setNewPet((prev) => ({ ...prev, name: e.target.value }))
               }
-              className="w-full border п-2 rounded"
+              className="w-full border p-2 rounded"
               required
             />
           </div>

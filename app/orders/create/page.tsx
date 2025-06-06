@@ -1,216 +1,274 @@
-// app/orders/create/page.tsx
+// Файл: app/orders/create/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useEffect, useState } from 'react';
 
-interface ExecutorProfile {
-  full_name: string;
-  city: string;
-  avatar_url?: string;
-}
-
+// Интерфейс для питомца (берём основные поля)
 interface Pet {
   id: string;
   name: string;
   pet_type: string;
+  avatar_url?: string | null;
 }
 
 export default function CreateOrderPage() {
   const router = useRouter();
-  const params = useSearchParams();
-  const executorId = params.get('executorId') || '';
+  const searchParams = useSearchParams();
+  const executorId = searchParams.get('executorId') || '';
 
-  const [executor, setExecutor] = useState<ExecutorProfile | null>(null);
+  // Состояния формы
   const [pets, setPets] = useState<Pet[]>([]);
-  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
-  const [serviceType, setServiceType] = useState<string>('walk');
-
-  const [date, setDate] = useState<string>('');
+  const [selectedPetId, setSelectedPetId] = useState<string>('');
+  const [serviceType, setServiceType] = useState<string>('walk'); // по умолчанию 'walk'
   const [address, setAddress] = useState<string>('');
+  const [date, setDate] = useState<string>('');
   const [details, setDetails] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [loadingPets, setLoadingPets] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
-    const fetchExecutorAndPets = async () => {
-      if (!executorId) {
-        setErrorMsg('Не указан исполнитель');
-        setLoading(false);
-        return;
-      }
+    // Сначала проверим, есть ли executorId в запросе
+    if (!executorId) {
+      router.push('/');
+      return;
+    }
 
-      const { data: execData, error: execError } = await supabase
-        .from('profiles')
-        .select('full_name, city, avatar_url')
-        .eq('user_id', executorId)
-        .single();
-      if (execError || !execData) {
-        setErrorMsg('Исполнитель не найден');
-        setLoading(false);
-        return;
-      }
-      setExecutor(execData);
-
-      // Загружаем питомцев текущего пользователя (клиента)
+    // Загружаем список питомцев текущего пользователя (клиента)
+    const fetchPets = async () => {
       const {
         data: { session },
+        error: sessionErr,
       } = await supabase.auth.getSession();
-      if (!session?.user) {
+      if (sessionErr || !session?.user) {
+        // если не залогинен, отправляем на логин
         router.push('/login');
         return;
       }
-      const { data: petsData, error: petsError } = await supabase
+      const userId = session.user.id;
+      const { data: petsData, error: petsErr } = await supabase
         .from('pets')
-        .select('id, name, pet_type')
-        .eq('owner_id', session.user.id);
+        .select('id, name, pet_type, avatar_url')
+        .eq('owner_id', userId);
 
-      if (petsError) {
-        console.error('Ошибка при загрузке питомцев:', petsError);
+      if (petsErr) {
+        console.error('Ошибка при загрузке питомцев:', petsErr.message);
+        setErrorMsg('Не удалось загрузить список питомцев.');
       } else if (petsData) {
-        setPets(petsData);
+        setPets(petsData as Pet[]);
+        // Если есть хотя бы 1 питомец, по умолчанию выберем первого
         if (petsData.length > 0) {
           setSelectedPetId(petsData[0].id);
         }
       }
-
-      setLoading(false);
+      setLoadingPets(false);
     };
 
-    fetchExecutorAndPets();
+    fetchPets();
   }, [executorId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
+    setErrorMsg('');
 
-    if (!date || !address) {
-      setErrorMsg('Пожалуйста, укажите дату и адрес');
+    // Проверка: обязательно указать питомца, адрес и дату
+    if (!selectedPetId) {
+      setErrorMsg('Пожалуйста, выберите питомца.');
+      return;
+    }
+    if (!address.trim()) {
+      setErrorMsg('Укажите адрес.');
+      return;
+    }
+    if (!date.trim()) {
+      setErrorMsg('Укажите дату/время.');
       return;
     }
 
-    const response = await fetch('/api/create-order', {
+    setSubmitting(true);
+    // Получаем ID текущего пользователя (клиента)
+    const {
+      data: { session },
+      error: sessionErr,
+    } = await supabase.auth.getSession();
+    if (sessionErr || !session?.user) {
+      setErrorMsg('Сессия не найдена. Пожалуйста, войдите снова.');
+      setSubmitting(false);
+      return;
+    }
+    const clientId = session.user.id;
+
+    // Делаем POST на наш API-роут
+    const res = await fetch('/api/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        executorId,
-        date,
+        executor_id: executorId,
+        client_id: clientId,
+        pet_id: selectedPetId,
+        service_type: serviceType,
         address,
-        details,
-        petId: selectedPetId,
-        serviceType,
+        date,
+        details: details.trim() || null,
       }),
     });
-
-    const result = await response.json();
-    if (!response.ok) {
-      setErrorMsg(result.error || 'Не удалось создать заказ');
+    const result = await res.json();
+    if (!res.ok) {
+      setErrorMsg(result.error || 'Не удалось создать заказ.');
+      setSubmitting(false);
       return;
     }
 
-    router.push('/orders');
+    // В случае успеха можем редиректнуть на Dashboard
+    router.push('/dashboard');
   };
 
-  if (loading) {
-    return <div className="p-6">Загрузка…</div>;
-  }
-
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">
-        Заказать у {executor?.full_name}
-      </h1>
-      {executor?.avatar_url && (
-        <img
-          src={executor.avatar_url}
-          alt={executor.full_name}
-          className="w-20 h-20 rounded-full mb-4"
-        />
-      )}
-      <p className="mb-2">
-        <strong>Город исполнителя:</strong> {executor?.city}
-      </p>
-      {errorMsg && <p className="text-red-600 mb-2">{errorMsg}</p>}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 1) Выбор питомца */}
-        <div>
-          <label className="block text-sm font-medium">Ваш питомец</label>
+    <div className="max-w-lg mx-auto mt-10 p-6 bg-white rounded shadow">
+      <h1 className="text-2xl font-bold mb-4">Новый заказ</h1>
+      {loadingPets ? (
+        <p>Загрузка питомцев…</p>
+      ) : (
+        <>
           {pets.length === 0 ? (
-            <p className="text-gray-500">
-              У вас нет питомцев. Добавьте их в Кабинете!
+            <p className="text-red-600">
+              У вас нет ни одного питомца. Сначала добавьте питомца в разделе "Мои
+              питомцы".
             </p>
           ) : (
-            <select
-              value={selectedPetId || ''}
-              onChange={(e) => setSelectedPetId(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-            >
-              {pets.map((pet) => (
-                <option key={pet.id} value={pet.id}>
-                  {pet.name} ({pet.pet_type})
-                </option>
-              ))}
-            </select>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Выбор питомца */}
+              <div>
+                <label
+                  htmlFor="pet-select"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Выберите питомца
+                </label>
+                <select
+                  id="pet-select"
+                  value={selectedPetId}
+                  onChange={(e) => setSelectedPetId(e.target.value)}
+                  className="w-full border p-2 rounded"
+                >
+                  {pets.map((pet) => (
+                    <option key={pet.id} value={pet.id}>
+                      {pet.name} ({pet.pet_type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Выбор вида услуги */}
+              <div>
+                <p className="block text-sm font-medium mb-1">Вид услуги</p>
+                <div className="flex gap-3">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="service"
+                      value="walk"
+                      checked={serviceType === 'walk'}
+                      onChange={() => setServiceType('walk')}
+                      className="mr-2"
+                    />
+                    Погулять
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="service"
+                      value="sitting"
+                      checked={serviceType === 'sitting'}
+                      onChange={() => setServiceType('sitting')}
+                      className="mr-2"
+                    />
+                    Посидеть
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="service"
+                      value="play"
+                      checked={serviceType === 'play'}
+                      onChange={() => setServiceType('play')}
+                      className="mr-2"
+                    />
+                    Поиграть
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="service"
+                      value="transport"
+                      checked={serviceType === 'transport'}
+                      onChange={() => setServiceType('transport')}
+                      className="mr-2"
+                    />
+                    Отвезти
+                  </label>
+                </div>
+              </div>
+
+              {/* Адрес */}
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium">
+                  Адрес
+                </label>
+                <input
+                  type="text"
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Например: ул. Пушкина, дом Колотушкина"
+                  className="w-full border p-2 rounded"
+                  required
+                />
+              </div>
+
+              {/* Дата и время */}
+              <div>
+                <label htmlFor="date" className="block text-sm font-medium">
+                  Дата и время
+                </label>
+                <input
+                  type="datetime-local"
+                  id="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full border p-2 rounded"
+                  required
+                />
+              </div>
+
+              {/* Дополнительные детали */}
+              <div>
+                <label htmlFor="details" className="block text-sm font-medium">
+                  Дополнительные детали (необязательно)
+                </label>
+                <textarea
+                  id="details"
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  className="w-full border p-2 rounded h-20"
+                />
+              </div>
+
+              {errorMsg && <p className="text-red-500">{errorMsg}</p>}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {submitting ? 'Сохраняем…' : 'Создать заказ'}
+              </button>
+            </form>
           )}
-        </div>
-
-        {/* 2) Выбор типа услуги */}
-        <div>
-          <label className="block text-sm font-medium">Вид услуги</label>
-          <select
-            value={serviceType}
-            onChange={(e) => setServiceType(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="walk">Погулять</option>
-            <option value="sitting">Посидеть дома</option>
-            <option value="play">Поиграть</option>
-            <option value="transport">Отвезти куда-то</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Дата и время</label>
-          <input
-            type="datetime-local"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Адрес</label>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            placeholder="Улица, дом, подъезд"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">
-            Дополнительные детали (необязательно)
-          </label>
-          <textarea
-            value={details}
-            onChange={(e) => setDetails(e.target.value)}
-            className="w-full border px-3 py-2 rounded h-24"
-            placeholder="Например: нужен поводок или другие пожелания"
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
-          disabled={pets.length === 0}
-        >
-          Оформить заказ
-        </button>
-      </form>
+        </>
+      )}
     </div>
   );
 }

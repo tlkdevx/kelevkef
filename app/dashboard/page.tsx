@@ -1,3 +1,4 @@
+// Файл: app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState, useRef, ChangeEvent } from 'react';
@@ -88,7 +89,7 @@ export default function DashboardPage() {
       }
       setUserId(session.user.id);
 
-      // Загружаем профиль пользователя
+      // 1) Загружаем профиль пользователя
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
@@ -99,11 +100,12 @@ export default function DashboardPage() {
         setAvatarUrl(profileData.avatar_url || null);
       }
 
+      // Сохраняем время последнего входа
       if (user && (user as any).last_sign_in_at) {
         setLastLogin((user as any).last_sign_in_at);
       }
 
-      // 1) Заказы (исполнитель)
+      // 2) Заказы (исполнитель)
       const execRes = await fetch('/api/get-executor-orders');
       const execResult = await execRes.json();
       if (!execRes.ok) {
@@ -114,14 +116,14 @@ export default function DashboardPage() {
       const fetchedExecOrders: OrderData[] = execResult.orders;
       setExecOrders(fetchedExecOrders);
 
-      // 2) Общий заработок исполнителя
+      // 3) Общий заработок исполнителя
       const earnRes = await fetch('/api/executor/earnings');
       const earnResult = await earnRes.json();
       if (earnRes.ok) {
         setTotalEarned(earnResult.totalEarned);
       }
 
-      // 3) Заказы (клиент)
+      // 4) Заказы (клиент)
       const clientRes = await fetch('/api/get-client-orders');
       const clientResult = await clientRes.json();
       if (!clientRes.ok) {
@@ -132,7 +134,7 @@ export default function DashboardPage() {
       const fetchedClientOrders: OrderData[] = clientResult.orders;
       setClientOrders(fetchedClientOrders);
 
-      // 4) Собираем user_id из всех заказов
+      // 5) Собираем user_id из всех заказов (для выдачи имени/аватара)
       const allIds = Array.from(
         new Set<string>([
           ...fetchedExecOrders.map((o) => o.client_id),
@@ -156,7 +158,7 @@ export default function DashboardPage() {
         setProfilesMap(map);
       }
 
-      // 5) Загружаем питомцев текущего пользователя
+      // 6) Загружаем питомцев текущего пользователя
       const { data: petsData, error: petsError } = await supabase
         .from('pets')
         .select('*')
@@ -209,7 +211,6 @@ export default function DashboardPage() {
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !activeChatOrder || !userId) return;
-
     const res = await fetch('/api/post-chat-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -227,7 +228,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Хэндлер выбора файла для питомца
+  // Обработчик выбора файла для питомца
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files ? e.target.files[0] : null;
     setPetFile(file);
@@ -235,7 +236,7 @@ export default function DashboardPage() {
     setUploadProgress(0);
   };
 
-  // Загрузка фото питомца с прогрессом (через signed URL)
+  // Загрузка фото питомца с прогрессом (точно так же, как в pets/edit)
   const uploadPetAvatar = async (petId: string) => {
     if (!petFile) return null;
     try {
@@ -243,7 +244,7 @@ export default function DashboardPage() {
       const fileName = `${petId}-${Date.now()}.${fileExt}`;
       const filePath = fileName;
 
-      // Получаем presigned URL
+      // Создаём presigned URL
       const { data: presignData, error: presignError } = await supabase.storage
         .from('pet-avatars')
         .createSignedUploadUrl(filePath, 60);
@@ -252,9 +253,9 @@ export default function DashboardPage() {
         return null;
       }
 
+      // Используем XHR, чтобы отслеживать прогресс точно так, как в pets/edit
+      const xhr = new XMLHttpRequest();
       return new Promise<string | null>((resolve) => {
-        const xhr = new XMLHttpRequest();
-
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
             const percent = Math.round((event.loaded / event.total) * 100);
@@ -264,12 +265,13 @@ export default function DashboardPage() {
 
         xhr.onload = async () => {
           if (xhr.status === 200 || xhr.status === 201) {
+            // После успешной загрузки получаем публичный URL
             const { data: urlData } = supabase.storage
               .from('pet-avatars')
               .getPublicUrl(filePath);
             resolve(urlData.publicUrl);
           } else {
-            console.error('Ошибка прямой загрузки:', xhr.statusText);
+            console.error('Ошибка при непосредственной загрузке:', xhr.statusText);
             resolve(null);
           }
         };
@@ -279,7 +281,8 @@ export default function DashboardPage() {
           resolve(null);
         };
 
-        xhr.open('PUT', presignData.signedURL, true);
+        // **ВНИМАНИЕ**: используем presignData.signedUrl (не signedURL)
+        xhr.open('PUT', presignData.signedUrl, true);
         xhr.setRequestHeader('x-upsert', 'true');
         xhr.send(petFile);
       });
@@ -313,7 +316,7 @@ export default function DashboardPage() {
     }
     const ownerId = session.user.id;
 
-    // Вставляем питомца без avatar_url
+    // 1) Создаём питомца без avatar_url
     const { data: pet, error: petErrorData } = await supabase
       .from('pets')
       .insert([
@@ -335,7 +338,7 @@ export default function DashboardPage() {
       return;
     }
 
-    // Если выбрали файл, загружаем и обновляем avatar_url
+    // 2) Если есть файл, загружаем и обновляем avatar_url
     if (petFile) {
       setUploadProgress(0);
       const publicUrl = await uploadPetAvatar(pet.id);
@@ -347,6 +350,7 @@ export default function DashboardPage() {
         if (updError) {
           console.error('Ошибка обновления avatar_url питомца:', updError.message);
         } else {
+          // Сразу обновляем локальный объект pet, чтобы отобразить аватарку
           pet.avatar_url = publicUrl;
         }
       }
@@ -365,29 +369,26 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto mt-8 pb-10 px-2 sm:px-4">
       {/* Приветствие и время последнего входа */}
-      <h1 className="text-2xl font-bold mb-1">Привет, {userName}</h1>
+      <h1 className="text-lg font-bold mb-1">Привет, {userName}</h1>
       {lastLogin && (
         <p className="text-gray-600 mb-2 text-sm">
           Вы были последний раз на сайте:{' '}
           {new Date(lastLogin).toLocaleString('ru-RU')}
         </p>
       )}
-      <div className="flex items-center gap-4 mb-6 text-sm">
-        <Link
-          href="/profile/edit"
-          className="text-blue-600 hover:underline"
-        >
+      <div className="flex flex-wrap items-center gap-3 mb-6 text-sm">
+        <Link href="/profile/edit" className="text-blue-600 hover:underline">
           Редактировать профиль
         </Link>
         <Link
           href="/history/executed"
-          className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded transition"
+          className="bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded transition"
         >
           Моя история (исполнитель)
         </Link>
         <Link
           href="/history/spending"
-          className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded transition"
+          className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 rounded transition"
         >
           Моя история (клиент)
         </Link>
@@ -395,8 +396,8 @@ export default function DashboardPage() {
 
       {/* Заработок исполнителя */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Заработок</h2>
-        <p className="text-base">
+        <h2 className="text-lg font-semibold mb-2">Заработок</h2>
+        <p className="text-sm">
           <strong>Всего заработано (подтверждённые заказы):</strong> ₪{' '}
           {totalEarned.toFixed(2)}
         </p>
@@ -404,7 +405,7 @@ export default function DashboardPage() {
 
       {/* Заказы как исполнитель */}
       <section className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">
+        <h2 className="text-lg font-semibold mb-4">
           Заказы (Вы как исполнитель)
         </h2>
         {execOrders.length === 0 ? (
@@ -473,7 +474,9 @@ export default function DashboardPage() {
                       <td className="px-2 py-1">{order.address}</td>
                       <td className="px-2 py-1">{order.details || '—'}</td>
                       <td className="px-2 py-1">
-                        {order.price != null ? `₪ ${order.price.toFixed(2)}` : '—'}
+                        {order.price != null
+                          ? `₪ ${order.price.toFixed(2)}`
+                          : '—'}
                       </td>
                       <td className="px-2 py-1 capitalize">
                         {order.status === 'pending'
@@ -533,9 +536,7 @@ export default function DashboardPage() {
 
       {/* Заказы как клиент */}
       <section className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">
-          Заказы (Вы как клиент)
-        </h2>
+        <h2 className="text-lg font-semibold mb-4">Заказы (Вы как клиент)</h2>
         {clientOrders.length === 0 ? (
           <p className="text-sm">Нет активных заказов в роли клиента.</p>
         ) : (
@@ -602,7 +603,9 @@ export default function DashboardPage() {
                       <td className="px-2 py-1">{order.address}</td>
                       <td className="px-2 py-1">{order.details || '—'}</td>
                       <td className="px-2 py-1">
-                        {order.price != null ? `₪ ${order.price.toFixed(2)}` : '—'}
+                        {order.price != null
+                          ? `₪ ${order.price.toFixed(2)}`
+                          : '—'}
                       </td>
                       <td className="px-2 py-1 capitalize">
                         {order.status === 'pending'
@@ -651,7 +654,7 @@ export default function DashboardPage() {
 
       {/* Мои питомцы */}
       <section className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">Мои питомцы</h2>
+        <h2 className="text-lg font-semibold mb-4">Мои питомцы</h2>
         {pets.length === 0 ? (
           <p className="text-sm">У вас ещё нет добавленных питомцев.</p>
         ) : (
@@ -659,20 +662,22 @@ export default function DashboardPage() {
             {pets.map((pet) => (
               <li
                 key={pet.id}
-                className="border p-4 rounded hover:shadow transition flex justify-between items-center"
+                className="border p-3 rounded hover:shadow transition flex justify-between items-center"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <Avatar
                     url={pet.avatar_url || null}
                     name={pet.name}
-                    size={48}
+                    size={40}
                   />
                   <div>
-                    <h3 className="text-lg font-medium">
+                    <h3 className="text-base font-medium">
                       {pet.name} ({pet.pet_type})
                     </h3>
                     <p className="text-sm">Возраст: {pet.age}</p>
-                    <p className="text-sm">Описание: {pet.description || '—'}</p>
+                    <p className="text-sm">
+                      Описание: {pet.description || '—'}
+                    </p>
                   </div>
                 </div>
                 <Link
@@ -686,10 +691,10 @@ export default function DashboardPage() {
           </ul>
         )}
 
-        <div className="bg-white p-6 rounded shadow max-w-md mx-auto">
-          <h3 className="text-xl font-bold mb-3">Добавить питомца</h3>
-          {petError && <p className="text-red-600 mb-2">{petError}</p>}
-          <form onSubmit={createPet} className="space-y-4">
+        <div className="bg-white p-4 rounded shadow max-w-md mx-auto">
+          <h3 className="text-base font-bold mb-2">Добавить питомца</h3>
+          {petError && <p className="text-red-600 text-sm mb-2">{petError}</p>}
+          <form onSubmit={createPet} className="space-y-3">
             <div>
               <label className="block text-sm font-medium">Тип питомца</label>
               <input
@@ -699,7 +704,7 @@ export default function DashboardPage() {
                 onChange={(e) =>
                   setNewPet((prev) => ({ ...prev, pet_type: e.target.value }))
                 }
-                className="w-full border p-2 rounded text-sm"
+                className="w-full border p-2 rounded"
                 placeholder="dog, cat или другой"
                 required
               />
@@ -713,7 +718,7 @@ export default function DashboardPage() {
                 onChange={(e) =>
                   setNewPet((prev) => ({ ...prev, name: e.target.value }))
                 }
-                className="w-full border p-2 rounded text-sm"
+                className="w-full border p-2 rounded"
                 required
               />
             </div>
@@ -727,7 +732,7 @@ export default function DashboardPage() {
                 onChange={(e) =>
                   setNewPet((prev) => ({ ...prev, age: e.target.value }))
                 }
-                className="w-full border p-2 rounded text-sm"
+                className="w-full border p-2 rounded"
                 required
               />
             </div>
@@ -742,7 +747,7 @@ export default function DashboardPage() {
                     description: e.target.value,
                   }))
                 }
-                className="w-full border p-2 rounded h-24 text-sm"
+                className="w-full border p-2 rounded h-20"
               />
             </div>
             <div>
@@ -778,7 +783,7 @@ export default function DashboardPage() {
             <button
               type="submit"
               disabled={petLoading}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm transition disabled:opacity-50"
+              className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm transition disabled:opacity-50"
             >
               {petLoading ? 'Сохраняем...' : 'Добавить питомца'}
             </button>
@@ -800,12 +805,12 @@ export default function DashboardPage() {
               ✕
             </button>
             <div className="p-4">
-              <h3 className="text-xl font-semibold mb-2">
+              <h3 className="text-lg font-semibold mb-2">
                 Чат по заказу #{activeChatOrder.slice(0, 8)}
               </h3>
               <div
                 ref={chatContainerRef}
-                className="border rounded h-60 p-3 overflow-y-auto bg-gray-50"
+                className="border rounded h-60 p-2 overflow-y-auto bg-gray-50"
               >
                 {chatMessages.map((msg) => {
                   const isMine = msg.sender_id === userId;
@@ -817,7 +822,7 @@ export default function DashboardPage() {
                       }`}
                     >
                       <div
-                        className={`px-3 py-2 rounded-lg max-w-xs ${
+                        className={`px-2 py-1 rounded-lg max-w-xs ${
                           isMine
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-200 text-black'
@@ -851,7 +856,7 @@ export default function DashboardPage() {
                 />
                 <button
                   onClick={sendMessage}
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm transition"
+                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm transition"
                 >
                   Отправить
                 </button>
@@ -888,7 +893,7 @@ function RatingForm({ orderId, existingRating, onRated }: RatingFormProps) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <select
         value={value}
         onChange={(e) => setValue(parseFloat(e.target.value))}
@@ -902,7 +907,7 @@ function RatingForm({ orderId, existingRating, onRated }: RatingFormProps) {
       </select>
       <button
         onClick={submitRating}
-        className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm transition"
+        className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-sm transition"
       >
         Оценить
       </button>
