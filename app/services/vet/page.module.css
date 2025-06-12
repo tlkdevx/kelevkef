@@ -1,0 +1,38 @@
+/* Добавьте в app/services/vet/page.module.css */
+
+.container {
+  padding: 1rem;
+}
+.title {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+.filterButtons {
+  margin-bottom: 1rem;
+}
+.button {
+  @apply bg-blue-100 text-gray-800 px-3 py-1 rounded-lg mr-2 mb-2 transition;
+}
+.activeButton {
+  @apply bg-blue-600 text-white px-3 py-1 rounded-lg mr-2 mb-2 transition;
+}
+.mapWrapper {
+  height: 500px;
+}
+.status, .error {
+  text-align: center;
+  margin: 2rem 0;
+}
+.popupName {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+.popupType {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+.popupLink {
+  display: inline-block;
+  margin-bottom: 0.25rem;
+  text-decoration: underline;
+}

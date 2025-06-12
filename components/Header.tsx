@@ -37,13 +37,10 @@ export default function Header() {
     };
 
     getUser();
-
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
       getUser();
     });
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
@@ -60,7 +57,7 @@ export default function Header() {
     'bg-blue-100 hover:bg-blue-200 text-gray-800 px-3 py-1 rounded transition';
 
   return (
-    <header className="bg-white shadow z-10"> {/* <-- z-10 */}
+    <header className="bg-white shadow z-10">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center relative">
         {/* Логотип */}
         <Link href="/" className="text-xl font-bold flex items-center">
@@ -71,6 +68,11 @@ export default function Header() {
         <nav className="flex gap-3 items-center">
           <Link href="/search" className={navButtonClass}>
             Найти догситтера
+          </Link>
+
+          {/* Новая ссылка Vet Services */}
+          <Link href="/services/vet" className={navButtonClass}>
+            Vet Services
           </Link>
 
           {userEmail && (
@@ -99,7 +101,6 @@ export default function Header() {
               </button>
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white shadow-md rounded z-50">
-                  {/* <-- z-50 у дропдауна */}
                   <Link
                     href="/dashboard"
                     className="block px-4 py-2 hover:bg-gray-100"
