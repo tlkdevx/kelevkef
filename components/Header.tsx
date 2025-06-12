@@ -52,7 +52,6 @@ export default function Header() {
     router.push('/');
   };
 
-  // Новый стиль навигационных кнопок
   const navButtonClass =
     'bg-blue-100 hover:bg-blue-200 text-gray-800 px-3 py-1 rounded transition';
 
@@ -65,14 +64,17 @@ export default function Header() {
           <span className="ml-2">KelevKef</span>
         </Link>
 
-        <nav className="flex gap-3 items-center">
+        <nav className="flex gap-3 items-center flex-wrap">
           <Link href="/search" className={navButtonClass}>
             Найти догситтера
           </Link>
 
-          {/* Новая ссылка Vet Services */}
           <Link href="/services/vet" className={navButtonClass}>
             Vet Services
+          </Link>
+
+          <Link href="/services/places" className={navButtonClass}>
+            Dog-Friendly Places
           </Link>
 
           {userEmail && (
